@@ -1,0 +1,137 @@
+---
+title: "Final Project"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+date: "2023-12-05"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r cars}
+
+library(tidyverse)
+library(readr)
+library(ggplot2)
+library(dplyr)
+library(randomForest)
+library(modelr)
+
+redwine <- read_csv("winequality-red.csv")
+```
+
+```{r}
+
+#Exploratory Data Analysis
+colnames(redwine)
+
+# Categorical variable is Quality
+# Continous Variables are the others
+
+```
+
+```{r}
+
+# Filter Out the good and bad quality of wine
+redwine <- mutate(redwine, quality_category = ifelse(quality >= 6, "Good", "Bad"))
+
+# Create a bar chart with quality categories
+ggplot(data = redwine, aes(x = quality_category, y = `volatile acidity`, fill = quality_category)) +
+  geom_point() +
+  labs(title = "Quality Distribution", x = "Quality Category", y = "Count")
+
+
+#EDA majority fo the wine samples given are bad quality wines as they said anything 6 or above is considered good wine.
+```
+
+
+```{r}
+ggplot(data = redwine, aes(x = pH, y = quality, colour = `residual sugar`)) + geom_point()
+
+```
+
+```{r}
+ggplot(data = redwine, aes(x = `residual sugar`, y = `fixed acidity`, colour = quality)) + geom_point()
+
+```
+
+
+```{r}
+summary(redwine)
+
+#1. fixed acidity median is 7.9
+#2. volatile acidity is 0.52
+#3. citric acid is 0.26
+
+```
+
+```{r}
+#Start MLR Model
+
+wineMLR <- lm(quality ~ `fixed acidity` + `volatile acidity` + `citric acid` +
+                   `residual sugar` + chlorides + `free sulfur dioxide` + 
+                   `total sulfur dioxide` + density + pH + sulphates + alcohol
+                 , data = redwine)
+
+#Adding Predictions and Residuals
+
+redwine <- redwine %>% 
+  add_predictions(wineMLR) %>% 
+  add_residuals(wineMLR) 
+
+```
+
+```{r}
+
+# Plotting Predictions
+ggplot(redwine, aes(x = alcohol, y = pred)) +
+  geom_point() +
+  labs(title = "Predicted Quality vs. Alcohol", x = "Alcohol", y = "Predicted Quality")
+
+# Plotting Residuals
+ggplot(redwine, aes(x = alcohol, y = resid)) +
+  geom_point() +
+  labs(title = "Residuals vs. Alcohol", x = "Alcohol", y = "Residuals")
+
+
+```
+
+```{r}
+
+plot(wineMLR)
+
+```
+### analysis from the mlr model
+### There is a positive relationship between alcohol content and the predicted quality of red wine. Thus, as the alcohol content starts to inscrease, we can see that the model predicts a higher quality of wine as well.
+
+### Most of the data points are mainly in alcohol levels from range 0 to 11. So it means the redwine data falls within this range mainly and the predictions are based of this range too mainly. There was a mention from the website that the data tends to fall between average quality types of wine and there aren't too many "good" quality wine samples as much as they wanted on it.
+
+### After my EDA analysis as well, using my predicted model, I can confirm as well that it was indeed true that most of the data has low quality wine samples.Since in the quality range they fall from 6 or below mainly.
+
+### Overall the ones ranging past 11 on the alcohol axis might not be accurate since we have missing omitted variables and not enough sufficient data to accurately represent our models as much as we wanted to. But most of the wine with higher alcohol has a higher quality but most of the wine is of moderate quality regardless of the alcohol content.
+
+### How to fix model accuracy we need more data on higher quality data as well and possibly more omitted variable unbiases to make it more accurate. I remember I saw that the dataset was specifically of the Portuguese "Vinho Verde" wine. So if we had different types of wine as well then it would be more unbiased since these variables are all related already so it doesnt satisfy the unbiased assumption.
+
+```{r}
+# Start Regression Random Forest Model
+
+set.seed(310)
+
+train$quality = as.numeric(as.character(train$quality))
+
+wineRFReg = randomForest(quality ~ alcohol, 
+                         data = train, 
+                         importance = TRUE, ntrees = 500) 
+
+print(wineRFReg)
+
+plot(wineRFReg)
+```
+
+
+
+
